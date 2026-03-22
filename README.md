@@ -1,2 +1,2 @@
 # ADOM_2026L_Deep_CNN-VGG
-Repository for university classes "Analiza danych obrazowych i multimedialnych".
+Repozytorium przeznaczone na projekt w ramach zajęć akademickich "Analiza danych obrazowych i multimedialnych", temat 7 - Głębokie CNN - VGG (2014).
