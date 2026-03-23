@@ -4,7 +4,7 @@ Repozytorium przeznaczone na projekt w ramach zajęć akademickich "Analiza dany
 ## Cel
 Stworzenie środowiska umożliwiającego przeprowadzenie eksperymentów dydatkycznych związanych z głęboką siecią CNN - VGG16.
 
-## Intalacja
+## Instalacja
 W trakcie
 
 ## Uruchomienie
