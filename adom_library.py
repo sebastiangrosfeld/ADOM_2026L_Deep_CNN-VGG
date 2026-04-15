@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dataset_root = './data'
+models_root = './models'
 
 transform = transforms.Compose([
     transforms.Resize(256),
@@ -22,6 +23,9 @@ transform = transforms.Compose([
 def show_device():
     print(DEVICE)
     return
+
+def count_model_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def classify_image_with_vgg_weights(image_path="tygrys.jpg", weights = models.VGG16_Weights.DEFAULT):
     vgg16 = models.vgg16(weights=weights)
@@ -95,9 +99,9 @@ def predict_top5_classes(model, image_tensor, classes):
     for i in range(5):
         print(classes[top5_idx[0][i]], round(top5_prob[0][i].item()* 100, 2), "%")
 
-def train_new_model(train_dataset, model_name="AlexNet", optimizer_name="Adam", epochs=10, batch_size=16, is_shuffle=True, with_train_output=True):
+def train_new_model(train_dataset, model_type="AlexNet", optimizer_name="Adam", epochs=10, batch_size=16, is_shuffle=True, with_train_output=True):
     num_classes = len(train_dataset.classes)
-    model = get_model_without_weights(num_classes=num_classes,model_name=model_name)
+    model = get_model_without_weights(num_classes=num_classes,model_type=model_type)
     optimizer = get_optimizer_for_model(model=model, optimizer_name=optimizer_name)
     train_loader = DataLoader(train_dataset, batch_size, shuffle=is_shuffle)
     return train_model(model, train_loader, optimizer, epochs, with_train_output)
@@ -127,18 +131,18 @@ def train_model(model, train_loader, optimizer, epochs, with_output):
     
     return model
 
-def get_model_without_weights(num_classes, model_name="VGG16"):
-    if(model_name=="VGG16"):
+def get_model_without_weights(num_classes, model_type="VGG16"):
+    if(model_type=="VGG16"):
         model = models.vgg16(weights=None)
         model.classifier[6] = nn.Linear(4096, num_classes)
-    elif(model_name=="AlexNet"):
+    elif(model_type=="AlexNet"):
         model = models.alexnet(weights=None)
         model.classifier[6] = nn.Linear(4096, num_classes)
-    elif(model_name=="GoogleNet"):
+    elif(model_type=="GoogleNet"):
         model = models.googlenet(weights=None, aux_logits=False)
         model.fc = nn.Linear(1024, num_classes)
     else:
-        print("Name of model shuold be one of { VGG16, AlexNet, GoogleNet }")
+        print("Type of model shuold be one of { VGG16, AlexNet, GoogleNet }")
     return model
 
 def get_optimizer_for_model(model, optimizer_name="Adam"):
@@ -151,3 +155,27 @@ def get_optimizer_for_model(model, optimizer_name="Adam"):
 
 def get_CIFAR10_dataset():
     return datasets.CIFAR10(root=dataset_root, train=True, download=True, transform=transform)
+
+def save_model(model, model_name, classes):
+    torch.save({
+    "model_state": model.state_dict(),
+    "num_classes": len(classes),
+    "class_names": classes
+    }, models_root + "/" + model_name + ".pth")
+
+def read_model(model_name, model_type):
+    model_info = torch.load(models_root + "/" + model_name + ".pth")
+    if(model_type=="VGG16"):
+        model = models.vgg16(weights=None)
+        model.classifier[6] = nn.Linear(4096, model_info["num_classes"])
+    elif(model_type=="AlexNet"):
+        model = models.alexnet(weights=None)
+        model.classifier[6] = nn.Linear(4096, model_info["num_classes"])
+    elif(model_type=="GoogleNet"):
+        model = models.googlenet(weights=None, aux_logits=False)
+        model.fc = nn.Linear(1024, model_info["num_classes"])
+    else:
+        print("Type of model shuold be one of { VGG16, AlexNet, GoogleNet }")
+    model.load_state_dict(model_info["model_state"])
+    classes = model_info["class_names"]
+    return model, classes
