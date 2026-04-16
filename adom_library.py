@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models, datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -114,6 +114,9 @@ def train_model(model, train_loader, optimizer, epochs, with_output):
         model.train()
         running_loss = 0.0
         i = 0
+        correct = 0
+        total= 0
+        
         for images, labels in train_loader:
             i=i+1
             images, labels = images.to(DEVICE), labels.to(DEVICE)
@@ -125,9 +128,12 @@ def train_model(model, train_loader, optimizer, epochs, with_output):
             optimizer.step()
 
             running_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
 
         if(with_output):
-            print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
+            print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {100*correct/total:.2f}%")
     
     return model
 
@@ -145,11 +151,20 @@ def get_model_without_weights(num_classes, model_type="VGG16"):
         print("Type of model shuold be one of { VGG16, AlexNet, GoogleNet }")
     return model
 
-def get_optimizer_for_model(model, optimizer_name="Adam"):
+def get_optimizer_for_model(model, optimizer_name="Adam", lr=0.0001, momentum=0.9):
     if(optimizer_name=="Adam"):
-        return optim.Adam(model.parameters(), lr=0.0001)
+        return optim.Adam(model.parameters(), lr=lr)
     elif(optimizer_name=="SGD"):
-        return optim.SGD(model.parameters(), lr=0.01)
+        return optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    else: 
+        print("Name of optimizer should be one of { Adam, SGD }")
+
+# do dotrenowania lr powinno być mniejsze od tego w pierwotnym uczeniu
+def get_optimizer_for_model_unfreeze_layers(model, optimizer_name="Adam", lr=0.00001, momentum=0.9):
+    if(optimizer_name=="Adam"):
+        return optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+    elif(optimizer_name=="SGD"):
+        return optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=momentum)
     else: 
         print("Name of optimizer should be one of { Adam, SGD }")
 
@@ -179,3 +194,141 @@ def read_model(model_name, model_type):
     model.load_state_dict(model_info["model_state"])
     classes = model_info["class_names"]
     return model, classes
+
+def freeze_backbone(model, model_type):
+    if model_type in ["VGG16", "AlexNet"]:
+        for param in model.features.parameters():
+            param.requires_grad = False
+
+    elif model_type == "GoogleNet":
+        for name, param in model.named_parameters():
+            if not name.startswith("fc"):
+                param.requires_grad = False
+    
+    else:
+        print("Type of model shuold be one of { VGG16, AlexNet, GoogleNet }")
+
+def unfreeze_all(model):
+    for param in model.parameters():
+        param.requires_grad = True
+
+def unfreeze_last_layers(model, model_type):
+    if model_type in ["VGG16", "AlexNet"]:
+        for param in model.features[-4:].parameters():
+            param.requires_grad = True
+
+    elif model_type == "GoogleNet":
+        for name, param in model.named_parameters():
+            if "inception5" in name or "fc" in name:
+                param.requires_grad = True
+
+    else:
+        print("Type of model shuold be one of { VGG16, AlexNet, GoogleNet }")
+
+class DatasetWrapper(Dataset):
+    def __init__(
+        self,
+        dataset,
+        indices=None,
+        remove_class=None,
+        remap_labels=False
+    ):
+        self.dataset = dataset
+
+        # ---------------------------------
+        # indeksy
+        # ---------------------------------
+        if indices is not None:
+            self.indices = indices
+
+        elif remove_class is not None:
+            self.indices = [
+                i for i, y in enumerate(dataset.targets)
+                if y != remove_class
+            ]
+
+        else:
+            self.indices = list(range(len(dataset)))
+
+        # ---------------------------------
+        # klasy
+        # ---------------------------------
+        if remove_class is not None:
+            self.classes = [
+                c for i, c in enumerate(dataset.classes)
+                if i != remove_class
+            ]
+        else:
+            self.classes = dataset.classes.copy()
+
+        self.class_to_idx = {
+            c: i for i, c in enumerate(self.classes)
+        }
+
+        # ---------------------------------
+        # targety
+        # ---------------------------------
+        self.targets = []
+
+        for i in self.indices:
+            label = dataset.targets[i]
+
+            if remove_class is not None and remap_labels:
+                if label > remove_class:
+                    label -= 1
+
+            self.targets.append(label)
+
+        self.remove_class = remove_class
+        self.remap_labels = remap_labels
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, idx):
+        image, label = self.dataset[self.indices[idx]]
+
+        if self.remove_class is not None and self.remap_labels:
+            if label > self.remove_class:
+                label -= 1
+
+        return image, label
+
+
+# =====================================================
+# SPLIT DATASETU NA:
+# 1. jedną klasę
+# 2. resztę klas
+# =====================================================
+
+def split_dataset(dataset, class_id, remap_rest=True):
+    # ------------------------------
+    # tylko jedna klasa
+    # ------------------------------
+    class_indices = [
+        i for i, y in enumerate(dataset.targets)
+        if y == class_id
+    ]
+
+    one_class_dataset = DatasetWrapper(
+        dataset,
+        indices=class_indices,
+        remap_labels=False
+    )
+
+    one_class_dataset.classes = [dataset.classes[class_id]]
+    one_class_dataset.class_to_idx = {
+        dataset.classes[class_id]: 0
+    }
+    one_class_dataset.targets = [0] * len(one_class_dataset)
+
+    # ------------------------------
+    # reszta klas
+    # ------------------------------
+    rest_dataset = DatasetWrapper(
+        dataset,
+        remove_class=class_id,
+        remap_labels=remap_rest
+    )
+
+    return one_class_dataset, rest_dataset
