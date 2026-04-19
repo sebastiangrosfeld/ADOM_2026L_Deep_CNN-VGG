@@ -99,9 +99,13 @@ def predict_top5_classes(model, image_tensor, classes):
     for i in range(5):
         print(classes[top5_idx[0][i]], round(top5_prob[0][i].item()* 100, 2), "%")
 
-def train_new_model(train_dataset, model_type="AlexNet", optimizer_name="Adam", epochs=10, batch_size=16, is_shuffle=True, with_train_output=True):
+def train_new_model(train_dataset, model_type="AlexNet", optimizer_name="Adam", epochs=10, batch_size=16, is_shuffle=True, with_train_output=True, dropout_value=None):
     num_classes = len(train_dataset.classes)
     model = get_model_without_weights(num_classes=num_classes,model_type=model_type)
+    
+    if dropout_value is not None:
+        model = set_dropout(model, model_type, dropout_value)
+        
     optimizer = get_optimizer_for_model(model=model, optimizer_name=optimizer_name)
     train_loader = DataLoader(train_dataset, batch_size, shuffle=is_shuffle)
     return train_model(model, train_loader, optimizer, epochs, with_train_output)
@@ -332,3 +336,18 @@ def split_dataset(dataset, class_id, remap_rest=True):
     )
 
     return one_class_dataset, rest_dataset
+
+# Dodane do eksperymentów z dropoutem
+def set_dropout(model, model_type, dropout_value=None):
+    if model_type in ["VGG16", "AlexNet"]:
+        if dropout_value is None:
+            model.classifier[2] = nn.Identity()
+            model.classifier[5] = nn.Identity()
+        else:
+            model.classifier[2] = nn.Dropout(p=dropout_value)
+            model.classifier[5] = nn.Dropout(p=dropout_value)
+
+    else:
+        print("Dropout setting is supported only for { VGG16, AlexNet }")
+
+    return model
