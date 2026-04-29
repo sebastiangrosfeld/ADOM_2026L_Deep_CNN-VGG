@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -5,10 +6,13 @@ from torchvision import models, datasets, transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
+import time
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dataset_root = './data'
-models_root = './models'
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_ROOT = os.path.join(BASE_DIR, "data")
+MODELS_ROOT = os.path.join(BASE_DIR, "models")
 
 transform = transforms.Compose([
     transforms.Resize(256),
@@ -127,7 +131,11 @@ def train_model(model, train_loader, optimizer, epochs, with_output):
     model.to(DEVICE)
     criterion = nn.CrossEntropyLoss()
 
+    print(f"Training {model.__class__.__name__} for {epochs} epochs...")
+    start_time = time.time()
+
     for epoch in range(epochs):
+        epoch_start_time = time.time()
         model.train()
         running_loss = 0.0
         i = 0
@@ -150,8 +158,12 @@ def train_model(model, train_loader, optimizer, epochs, with_output):
             correct += predicted.eq(labels).sum().item()
 
         if (with_output):
+            epoch_time = time.time() - epoch_start_time
             print(
-                f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {100*correct/total:.2f}%")
+                f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader):.4f}, Acc: {100*correct/total:.2f}%, Time: {epoch_time:.2f}s")
+
+    total_time = time.time() - start_time
+    print(f"Total training time: {total_time:.2f}s")
 
     return model
 
@@ -193,7 +205,7 @@ def get_optimizer_for_model_unfreeze_layers(model, optimizer_name="Adam", lr=0.0
 
 def get_CIFAR10_dataset(train_dataset=True, perform_transform=True):
     return datasets.CIFAR10(
-        root=dataset_root,
+        root=DATASET_ROOT,
         train=train_dataset,
         download=True,
         transform=transform if perform_transform else None
@@ -201,15 +213,18 @@ def get_CIFAR10_dataset(train_dataset=True, perform_transform=True):
 
 
 def save_model(model, model_name, classes):
+    file_path = MODELS_ROOT + "/" + model_name + ".pth"
+    os.makedirs(MODELS_ROOT, exist_ok=True)
+
     torch.save({
         "model_state": model.state_dict(),
         "num_classes": len(classes),
         "class_names": classes
-    }, models_root + "/" + model_name + ".pth")
+    }, file_path)
 
 
 def read_model(model_name, model_type):
-    model_info = torch.load(models_root + "/" + model_name + ".pth")
+    model_info = torch.load(MODELS_ROOT + "/" + model_name + ".pth")
     if (model_type == "VGG16"):
         model = models.vgg16(weights=None)
         model.classifier[6] = nn.Linear(4096, model_info["num_classes"])
