@@ -1,0 +1,17 @@
+image_variant,AlexNet,GoogLeNet,VGG16
+blur_1,ship,ship,ship
+blur_2,ship,airplane,ship
+bright,ship,ship,ship
+dark,ship,ship,ship
+low_contrast,ship,ship,ship
+noise_10,ship,ship,automobile
+noise_25,ship,ship,truck
+noise_50,truck,frog,ship
+occlusion_center_20,ship,ship,ship
+occlusion_center_40,truck,ship,truck
+occlusion_random_30,ship,ship,ship
+original,ship,ship,ship
+rotated_15,automobile,ship,ship
+rotated_180,automobile,airplane,airplane
+rotated_30,automobile,ship,bird
+rotated_90,bird,airplane,cat

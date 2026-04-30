@@ -15,10 +15,6 @@ transform = T.Compose([
 random.seed(42)
 
 
-def preprocess_pil_image(img):
-    return transform(img)
-
-
 def classify_pil_image(model, img, classes):
     img_tensor = transform(img)
     adom.predict_top5_classes(model, img_tensor, classes)

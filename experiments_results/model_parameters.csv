@@ -1,0 +1,4 @@
+model,parameters
+VGG16,134301514
+AlexNet,57044810
+GoogLeNet,5610154

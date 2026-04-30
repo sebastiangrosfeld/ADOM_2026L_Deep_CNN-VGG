@@ -30,6 +30,10 @@ def show_device():
     return
 
 
+def preprocess_pil_image(img):
+    return transform(img)
+
+
 def count_model_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -112,6 +116,35 @@ def predict_top5_classes(model, image_tensor, classes):
     for i in range(5):
         print(classes[top5_idx[0][i]], round(
             top5_prob[0][i].item() * 100, 2), "%")
+
+
+def predict_topk_classes(model, image_tensor, classes, k=5):
+    model = model.to(DEVICE)
+    model.eval()
+
+    image = image_tensor.unsqueeze(0).to(DEVICE)
+
+    with torch.no_grad():
+        outputs = model(image)
+        probs = torch.softmax(outputs, dim=1)
+
+    topk_prob, topk_idx = torch.topk(probs, k)
+
+    predictions = []
+
+    for i in range(k):
+        class_id = int(topk_idx[0][i].item())
+        probability = float(topk_prob[0][i].item())
+
+        predictions.append({
+            "rank": i + 1,
+            "class_id": class_id,
+            "class_name": classes[class_id],
+            "probability": probability,
+            "probability_percent": probability * 100,
+        })
+
+    return predictions
 
 
 def train_new_model(train_dataset, model_type="AlexNet", optimizer_name="Adam", epochs=10, batch_size=16, is_shuffle=True, with_train_output=True, dropout_value=None):
@@ -221,6 +254,28 @@ def save_model(model, model_name, classes):
         "num_classes": len(classes),
         "class_names": classes
     }, file_path)
+
+
+def load_models(model_specs):
+    loaded = {}
+    classes = None
+
+    for display_name, spec in model_specs.items():
+        model, model_classes = read_model(
+            spec["model_name"], spec["model_type"])
+        model = model.to(DEVICE)
+        model.eval()
+
+        loaded[display_name] = {
+            "model": model,
+            "model_type": spec["model_type"],
+            "model_name": spec["model_name"],
+        }
+
+        if classes is None:
+            classes = model_classes
+
+    return loaded, classes
 
 
 def read_model(model_name, model_type):
@@ -397,3 +452,69 @@ def set_dropout(model, model_type, dropout_value=None):
         print("Dropout setting is supported only for { VGG16, AlexNet }")
 
     return model
+
+
+def evaluate_models_on_dataset(loaded_models, dataset, classes, batch_size=64):
+    results = {}
+    for display_name, info in loaded_models.items():
+        results[display_name] = evaluate_model_on_dataset(
+            info["model"], dataset, classes, batch_size=batch_size
+        )
+    return results
+
+
+def evaluate_model_on_dataset(model, dataset, classes, batch_size=64, shuffle=False):
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    return evaluate_model_on_loader(model, loader, classes)
+
+
+def evaluate_model_on_loader(model, data_loader, classes):
+    model = model.to(DEVICE)
+    model.eval()
+    criterion = nn.CrossEntropyLoss()
+
+    total = 0
+    correct = 0
+    running_loss = 0.0
+
+    per_class_total = {class_name: 0 for class_name in classes}
+    per_class_correct = {class_name: 0 for class_name in classes}
+
+    with torch.no_grad():
+        for images, labels in data_loader:
+            images = images.to(DEVICE)
+            labels = labels.to(DEVICE)
+
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+
+            # wybieramy klasę z najwyższym prawdopodobieństwem
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+
+            for true_label, predicted_label in zip(labels, predicted):
+                true_id = int(true_label.item())
+                predicted_id = int(predicted_label.item())
+                class_name = classes[true_id]
+                per_class_total[class_name] += 1
+                if true_id == predicted_id:
+                    per_class_correct[class_name] += 1
+
+    per_class_accuracy = {}
+    for class_name in classes:
+        class_total = per_class_total[class_name]
+        class_correct = per_class_correct[class_name]
+        per_class_accuracy[class_name] = class_correct / \
+            class_total if class_total > 0 else 0.0
+
+    return {
+        "accuracy_percent": 100 * correct / total if total > 0 else 0.0,
+        "avg_loss": running_loss / len(data_loader) if len(data_loader) > 0 else 0.0,
+        "correct": correct,
+        "total": total,
+        "per_class_accuracy": per_class_accuracy,
+        "per_class_correct": per_class_correct,
+        "per_class_total": per_class_total,
+    }
