@@ -518,3 +518,45 @@ def evaluate_model_on_loader(model, data_loader, classes):
         "per_class_correct": per_class_correct,
         "per_class_total": per_class_total,
     }
+
+
+def visualize_feature_maps(model, image_tensor, layer_indices=[0, 5, 10, 17, 24], max_maps=8):    
+    model = model.to(DEVICE)
+    model.eval()
+
+    image = image_tensor.unsqueeze(0).to(DEVICE)
+
+    with torch.no_grad():
+        current_output = image
+
+        for layer_index, layer in enumerate(model.features):
+            current_output = layer(current_output)
+
+            if layer_index in layer_indices:
+                feature_maps = current_output.squeeze(0).detach().cpu()
+                maps_to_show = min(max_maps, feature_maps.shape[0])
+
+                plt.figure(figsize=(maps_to_show * 2, 2.5))
+                plt.suptitle(
+                    f"Feature maps - layer {layer_index}: {layer.__class__.__name__}",
+                    fontsize=12
+                )
+
+                for i in range(maps_to_show):
+                    plt.subplot(1, maps_to_show, i + 1)
+                    plt.imshow(feature_maps[i], cmap="viridis")
+                    plt.axis("off")
+
+                plt.show()
+
+
+def show_model_layers(model, only_features=True):
+    if only_features and hasattr(model, "features"):
+        print("=== model.features ===")
+        for index, layer in enumerate(model.features):
+            print(f"{index}: {layer}")
+
+    else:
+        print("=== cały model ===")
+        for name, module in model.named_modules():
+            print(f"{name}: {module}")
