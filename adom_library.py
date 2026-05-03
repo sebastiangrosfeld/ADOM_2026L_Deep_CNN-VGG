@@ -560,3 +560,17 @@ def show_model_layers(model, only_features=True):
         print("=== cały model ===")
         for name, module in model.named_modules():
             print(f"{name}: {module}")
+
+
+def get_vgg16_with_weights_for_cifar10(num_classes=10, weights=models.VGG16_Weights.DEFAULT, dropout_value=None):
+    model = models.vgg16(weights=weights)
+    model.classifier[6] = nn.Linear(4096, num_classes)
+
+    if dropout_value is None:
+        model.classifier[2] = nn.Identity()
+        model.classifier[5] = nn.Identity()
+    else:
+        model.classifier[2] = nn.Dropout(p=dropout_value)
+        model.classifier[5] = nn.Dropout(p=dropout_value)
+
+    return model
