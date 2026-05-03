@@ -2,12 +2,27 @@
 Repozytorium przeznaczone na projekt w ramach zajęć akademickich "Analiza danych obrazowych i multimedialnych", temat 7 - Głębokie CNN - VGG (2014).
 
 ## Cel
-<!-- Stworzenie środowiska umożliwiającego przeprowadzenie eksperymentów dydatkycznych związanych z głęboką siecią CNN - VGG16. -->
-
-Analiza architektury VGG16 w porównaniu z AlexNet, ze szczególnym uwzględnieniem wpływu głębokości sieci, dropout, fine-tuningu oraz odporności na zakłócenia obrazu.
+Analiza architektury sieci CNN - VGG16 w porównaniu z AlexNet i GoogLeNet, ze szczególnym uwzględnieniem wpływu głębokości sieci, dropout, fine-tuningu oraz odporności na zakłócenia obrazu.
 
 ## Instalacja
-W trakcie
+
+Utworzenie środowiska wirtualnego Python:
+
+```sh
+python -m venv .venv
+```
+
+Aktywacja środowiska wirtualnego:
+
+```sh
+.\.venv\Scripts\Activate.ps1
+```
+
+Instalacja wymaganych zależności:
+
+```sh
+pip install -r requirements.txt
+```
 
 ## Uruchomienie
 W trakcie
@@ -46,16 +61,12 @@ oraz ograniczenia wynikające z rosnącej złożoności modelu.
     - 20 min omawianie metody, augmentacji
     - 10 min omawianie eksperymentów - słabe punkty metody, kiedy działa lepiej a kiedy gorzej itd.
 
-## Plan eksperymentów
+## Przeprowadzane eksperymenty
 
-### 1. VGG16 vs AlexNet
+Przeprowadzone eksperymenty zostały udokumentowane w następujących plikach Jupyter Notebook:
 
-Porównać architektury:
-- głębokość
-- liczba parametrów
-- skuteczność
-- odporność na dane
-
-### 
-
-
+- porównanie VGG16 z AlexNet oraz GoogLeNet, wraz ze sprawdzeniem odporności na zakłócenia i zniekształcenia obrazów: [experiments-comparison.ipynb](experiments-comparison.ipynb)
+- wpływ dropout na dokładność modelu: [experiments-dropout.ipynb](experiments-dropout.ipynb)
+- analiza feature maps: [experiments-feature-maps.ipynb](experiments-feature-maps.ipynb)
+- pomiar pamięci RAM: [experiments-ram-analysis.ipynb](experiments-ram-analysis.ipynb)
+- pełny fine-tuning oraz analiza warstw głębokich: [experiments-fine-tuning.ipynb](experiments-fine-tuning.ipynb)
