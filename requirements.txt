@@ -1,7 +1,9 @@
-torch --index-url https://download.pytorch.org/whl/cu121
-torchvision --index-url https://download.pytorch.org/whl/cu121
-torchaudio --index-url https://download.pytorch.org/whl/cu121
-matplotlib
-pandas
-psutil
-numpy
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+torchaudio==2.5.1+cu121
+matplotlib==3.10.8
+pandas==3.0.2
+psutil==7.2.2
+numpy==2.4.3
