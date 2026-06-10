@@ -1,6 +1,8 @@
 # ADOM_2026L_Głębokie_CNN-VGG
 Repozytorium przeznaczone na projekt w ramach zajęć akademickich "Analiza danych obrazowych i multimedialnych", temat 7 - Głębokie CNN - VGG (2014).
 
+Plik demonstracyjny został zapisany jako [demo_final.ipynb](demo_final.ipynb).
+
 ## Cel
 Analiza architektury sieci CNN - VGG16 w porównaniu z AlexNet i GoogLeNet, ze szczególnym uwzględnieniem wpływu głębokości sieci, dropout, fine-tuningu oraz odporności na zakłócenia obrazu.
 
@@ -23,9 +25,6 @@ Instalacja wymaganych zależności:
 ```sh
 pip install -r requirements.txt
 ```
-
-## Uruchomienie
-W trakcie
 
 ## Zadanie projektowe (Temat 7 - Głębokie CNN – VGG (2014))
 
